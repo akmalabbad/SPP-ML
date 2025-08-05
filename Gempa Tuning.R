@@ -14,7 +14,7 @@ library(tictoc)
 library(spatstat.geom)
 library(dplyr)
 
-setwd('C:/Users/Akmal/Documents/ITS/TA')
+#setwd('C:/Users/Akmal/Documents/ITS/TA')
 
 # Load your data
 depth = load("datatesistabita/depth_tesis.Rda")
@@ -598,3 +598,4 @@ points(gempaSM$x, gempaSM$y,
        cex  = 1 * (gempaSM$marks + 0.1) / max(gempaSM$marks))
 polygon(gempaSM$window$bdry[[1]], border = 2)    # study window, optional
 axis(1); axis(2)
+
