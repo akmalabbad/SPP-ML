@@ -119,6 +119,7 @@ for (scenario in simulation_scenarios) {
     set.seed(i)
     
     cat(sprintf("\n--- [Siklus %d] Menjalankan simulasi point process...\n", i))
+    #### Switch here : simulate_thomas_process() ###
     true_simulation <- simulate_poisson_process(
       covariate_names = sim_cov_names, coefficients = sim_coefficients,
       bci_covars = bci.covars, bei_window = win, n_points = 2000, 
@@ -181,5 +182,6 @@ for (scenario in simulation_scenarios) {
     cat(sprintf("\n--- Laporan ringkasan untuk skenario %s disimpan di: %s ---\n", toupper(intensity_form), summary_file_path))
   }
 }
+
 
 cat("\n--- SEMUA PROSES SIMULASI SELESAI. ---\n")
