@@ -261,8 +261,11 @@ simulate_thomas_process <- function(covariate_names, coefficients, bci_covars, b
   
   # 4. Simulate the point process
   #sim_points <- rpoispp(Lambda, win = win, forcewin = TRUE)
-  kappa = sum(win$yrange) / (10 * area.owin(win)); scale = 1e-6 * sum(win$xrange)
-  sim_points <- rThomas(kappa, scale = scale, mu = Lambda/(kappa * 1e-6 * area.owin(win)), win = win)
+  #kappa = sum(win$yrange) / (10 * area.owin(win)); scale = 1e-6 * sum(win$xrange)
+  #sim_points <- rThomas(kappa, scale = scale, mu = Lambda/(kappa * 1e-6 * area.owin(win)), win = win)
+  ## Revised version
+  kappa <- sum(win$yrange) * (2 * area.owin(win)); mu <- Lambda/kappa; scale <- 4e-2 * sum(win$xrange)
+  sim_points <- rThomas(kappa, scale = scale, mu = mu, win = win)
   
   # 5. Create the quadrature scheme
   qd_pois <- spatstat.geom::quadscheme(sim_points)
