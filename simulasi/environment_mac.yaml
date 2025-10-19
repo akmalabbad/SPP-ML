@@ -1,0 +1,65 @@
+name: lgbm-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # Core system libraries
+  - bzip2
+  - ca-certificates
+  - expat
+  - libblas=*=*openblas
+  - libcblas
+  - liblapack
+  - libffi
+  - libiconv
+  - libsqlite
+  - libxml2
+  - libzlib
+  - llvm-openmp
+  - openssl
+  - sqlite
+  - tk
+  - xz
+  - yaml
+  - zlib
+  - zstd
+
+  # Python and core packages
+  - python=3.12
+  - pip
+  - setuptools
+  - wheel
+
+  # Math and ML
+  - numpy
+  - scipy
+  - pandas
+  - scikit-learn
+  - joblib
+  - threadpoolctl
+
+  # ML frameworks
+  - lightgbm
+  - xgboost
+
+  # Optimization and experiment tracking
+  - optuna
+  - sqlalchemy
+  - alembic
+  - mako
+
+  # Utilities
+  - colorama
+  - colorlog
+  - tqdm
+  - pyyaml
+  - packaging
+  - python-dateutil
+  - pytz
+  - python-tzdata
+  - typing-extensions
+  - six
+  - zipp
+
+  # Performance / threading
+  - llvm-openmp

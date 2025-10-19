@@ -14,71 +14,6 @@ standardize_im <- function(img) {
      unitname = img$unitname)
 }
 
-simulate_strauss_process <- function(covariate_names, intercept, coefficients, bci_covars, bei_window, r_inhibit, gamma_inhibit, scale_factor=500, n_points=300) {
-  library(spatstat)
-  library(spatstat.random)
-  library(spatstat.geom)
-  
-  # 1. Extract and rescale covariates
-  cov_images <- lapply(covariate_names, function(name) {
-    img <- bci_covars[[name]]
-    img_rescaled <- rescale(img, s = scale_factor, unitname = c("km", "kms"))
-    standardize_im(img_rescaled)
-  })
-  names(cov_images) <- covariate_names
-  # Create a constant image with the intercept
-  zero_matrix <- matrix(0,
-                        nrow = length(cov_images[[1]]$yrow),
-                        ncol = length(cov_images[[1]]$xcol))
-  
-  logLambda <- im(zero_matrix,
-                  xcol = cov_images[[1]]$xcol,
-                  yrow = cov_images[[1]]$yrow,
-                  xrange = cov_images[[1]]$xrange,
-                  yrange = cov_images[[1]]$yrange,
-                  unitname = cov_images[[1]]$unitname)
-  
-  # Sum covariates times their coefficients
-  for (i in seq_along(covariate_names)) {
-    logLambda <- logLambda + coefficients[i] * cov_images[[i]]
-  }
-  
-  win <- with(bei_window, owin(xrange = xrange / scale_factor, yrange = yrange / scale_factor))
-  Lambda <- eval.im(exp(logLambda))
-  beta0 <- log(n_points/(integral.im(Lambda,win)))
-  
-  mh_model <- rmhmodel(
-    cif = "strauss",
-    par = list(beta = exp(beta0), gamma = gamma_inhibit, r = r_inhibit),
-    trend = Lambda,
-    w = win
-  )
-  
-  mh_start <- list(n.start = n_points)
-  mh_control <- list(nrep = 1e6)
-  
-  sim_points <- rmh(model = mh_model, start = mh_start, control = mh_control)
-  
-  # 7. Extract covariate values at simulated points
-  cov_values <- lapply(cov_images, function(img) img[sim_points])
-  
-  # 8. Build dataframe of x, y and covariates
-  df <- data.frame(
-    x = sim_points$x,
-    y = sim_points$y,
-    cov_values
-  )
-  names(df)[-(1:2)] <- covariate_names  # name covariate columns
-  
-  return(list(
-    sim_points = sim_points,
-    intensity = Lambda,
-    covariates = cov_images,
-    sim_data = df,
-    pp = sim_points
-  ))
-}
-
 simulate_poisson_process <- function(covariate_names, coefficients, bci_covars, bei_window, n_points=300,
                                      scale_factor = 500, intensity_form = 'linear') {
   library(spatstat)
@@ -209,8 +144,31 @@ simulate_poisson_process <- function(covariate_names, coefficients, bci_covars, 
       vol = w.quad(qd_logi_nd2)                  # This function also works correctly
     )
   ))
+
+  # === 8. Save visualization as PNG ===
+  plot_dir <- "plots_simulation"
+  if (!dir.exists(plot_dir)) dir.create(plot_dir)
+
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  base_name <- paste0(plot_dir, "/", intensity_form, "_", timestamp)
+
+  # 1️⃣ True Intensity
+  png(paste0(base_name, "_1_intensity.png"), width = 1200, height = 800)
+  plot(Lambda, main = paste("True Intensity (", intensity_form, ")", sep = ""))
+  dev.off()
+
+  # 2️⃣ Simulated Points
+  png(paste0(base_name, "_2_points.png"), width = 1200, height = 800)
+  plot(sim_points, main = "Simulated Points", pch = 20, cols = "red", cex = 0.5)
+  dev.off()
+
+  # 3️⃣ Overlay (Intensity + Points)
+  png(paste0(base_name, "_3_overlay.png"), width = 1200, height = 800)
+  plot(Lambda, main = paste("Intensity + Points (", intensity_form, ")", sep = ""))
+  plot(sim_points, add = TRUE, pch = 19, col = "red")
+  dev.off()
   
-  # 8. Return everything in a list
+  # 9. Return everything in a list
   return(list(
     sim_points = sim_points,
     intensity = Lambda,
@@ -222,7 +180,7 @@ simulate_poisson_process <- function(covariate_names, coefficients, bci_covars, 
   ))
 }
 
-simulate_thomas_process <- function(covariate_names, coefficients, bci_covars, bei_window, n_points=300,
+simulate_thomas_process <- function(covariate_names, coefficients, bci_covars, bei_window, n_points=100,
                                      scale_factor = 500, intensity_form = 'linear') {
   library(spatstat)
   library(spatstat.random)
@@ -354,8 +312,31 @@ simulate_thomas_process <- function(covariate_names, coefficients, bci_covars, b
       vol = w.quad(qd_logi_nd2)                  # This function also works correctly
     )
   ))
+
+  # === 8. Save visualization as PNG ===
+  plot_dir <- "plots_simulation"
+  if (!dir.exists(plot_dir)) dir.create(plot_dir)
+
+  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
+  base_name <- paste0(plot_dir, "/", intensity_form, "_", timestamp)
+
+  # 1️⃣ True Intensity
+  png(paste0(base_name, "_1_intensity.png"), width = 1200, height = 800)
+  plot(Lambda, main = paste("True Intensity (", intensity_form, ")", sep = ""))
+  dev.off()
+
+  # 2️⃣ Simulated Points
+  png(paste0(base_name, "_2_points.png"), width = 1200, height = 800)
+  plot(sim_points, main = "Simulated Points", pch = 20, cols = "red", cex = 0.5)
+  dev.off()
+
+  # 3️⃣ Overlay (Intensity + Points)
+  png(paste0(base_name, "_3_overlay.png"), width = 1200, height = 800)
+  plot(Lambda, main = paste("Intensity + Points (", intensity_form, ")", sep = ""))
+  plot(sim_points, add = TRUE, pch = 19, col = "red")
+  dev.off()
   
-  # 8. Return everything in a list
+  # 9. Return everything in a list
   return(list(
     sim_points = sim_points,
     intensity = Lambda,
@@ -541,4 +522,69 @@ build_dummy_dataframe <- function(dummy_coords, covariate_names, bci_covars, sca
   names(df_dummy)[-(1:2)] <- covariate_names
   
   return(df_dummy)
+}
+
+simulate_strauss_process <- function(covariate_names, intercept, coefficients, bci_covars, bei_window, r_inhibit, gamma_inhibit, scale_factor=500, n_points=300) {
+  library(spatstat)
+  library(spatstat.random)
+  library(spatstat.geom)
+  
+  # 1. Extract and rescale covariates
+  cov_images <- lapply(covariate_names, function(name) {
+    img <- bci_covars[[name]]
+    img_rescaled <- rescale(img, s = scale_factor, unitname = c("km", "kms"))
+    standardize_im(img_rescaled)
+  })
+  names(cov_images) <- covariate_names
+  # Create a constant image with the intercept
+  zero_matrix <- matrix(0,
+                        nrow = length(cov_images[[1]]$yrow),
+                        ncol = length(cov_images[[1]]$xcol))
+  
+  logLambda <- im(zero_matrix,
+                  xcol = cov_images[[1]]$xcol,
+                  yrow = cov_images[[1]]$yrow,
+                  xrange = cov_images[[1]]$xrange,
+                  yrange = cov_images[[1]]$yrange,
+                  unitname = cov_images[[1]]$unitname)
+  
+  # Sum covariates times their coefficients
+  for (i in seq_along(covariate_names)) {
+    logLambda <- logLambda + coefficients[i] * cov_images[[i]]
+  }
+  
+  win <- with(bei_window, owin(xrange = xrange / scale_factor, yrange = yrange / scale_factor))
+  Lambda <- eval.im(exp(logLambda))
+  beta0 <- log(n_points/(integral.im(Lambda,win)))
+  
+  mh_model <- rmhmodel(
+    cif = "strauss",
+    par = list(beta = exp(beta0), gamma = gamma_inhibit, r = r_inhibit),
+    trend = Lambda,
+    w = win
+  )
+  
+  mh_start <- list(n.start = n_points)
+  mh_control <- list(nrep = 1e6)
+  
+  sim_points <- rmh(model = mh_model, start = mh_start, control = mh_control)
+  
+  # 7. Extract covariate values at simulated points
+  cov_values <- lapply(cov_images, function(img) img[sim_points])
+  
+  # 8. Build dataframe of x, y and covariates
+  df <- data.frame(
+    x = sim_points$x,
+    y = sim_points$y,
+    cov_values
+  )
+  names(df)[-(1:2)] <- covariate_names  # name covariate columns
+  
+  return(list(
+    sim_points = sim_points,
+    intensity = Lambda,
+    covariates = cov_images,
+    sim_data = df,
+    pp = sim_points
+  ))
 }

@@ -1,0 +1,9 @@
+CONDA_SUBDIR=osx-arm64 conda env create -f environment_mac.yaml
+conda activate lgbm-env
+which python
+R
+library(reticulate)
+use_python("/Users/yourname/miniconda3/envs/lgbm-env/bin/python", required = TRUE)
+py_config()
+quit()
+Rscript run-sim-new.R
