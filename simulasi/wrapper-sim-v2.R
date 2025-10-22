@@ -26,7 +26,7 @@ run_analysis <- function(model_type, loss_type, sim_data, sim_intensity, sim_poi
   # --- 3. Menghitung F_prime (jika perlu) ---
   F_prime <- 1.0
   if (loss_type == "weighted_poisson") {
-    k_function <- Kinhom(sim_points, correction = 'translation')
+    k_function <- Kinhom(sim_points, lambda = sim_intensity, correction = 'translation')
     rata_rata_jarak <- median(nndist(sim_points))
     F_prime <- with(k_function[which.min(abs(k_function$r - rata_rata_jarak)), ], trans - theo)
     if (is.na(F_prime) || is.infinite(F_prime) || F_prime < 0) F_prime <- 1.0
@@ -43,18 +43,18 @@ run_analysis <- function(model_type, loss_type, sim_data, sim_intensity, sim_poi
     X_matrix <- X
     all_preds <- if (model_type == "xgb") final_model$predict(xgb$DMatrix(X_matrix)) else final_model$predict(as.matrix(X_matrix))
     delta <- 1/vol
-    log_likelihood <- sum(all_preds[y == 1]) - sum(exp(all_preds[y == -1]) * vol[y == -1])
+    log_likelihood <- sum(all_preds[y == 1]) - sum(exp(all_preds) * vol)
     left_scaled_log_likelihood <- sum(all_preds[y == 1] - log((scale_factor)^2))
-    right_scaled_log_likelihood <- sum(exp(all_preds[y == -1]) * vol[y == -1])
+    right_scaled_log_likelihood <- sum(exp(all_preds) * vol)
     scaled_log_likelihood <- left_scaled_log_likelihood - right_scaled_log_likelihood
     
     # Baddeley
     #logistic_log_likelihood <- sum(log(exp(all_preds[y==1])/(exp(all_preds[y==1]) + delta[y==1]))) + sum(log(delta[y == -1]/(exp(all_preds[y == -1]) + delta[y == -1])))
     
     left_logistic_log_likelihood <- sum((log(exp(all_preds[y == 1])/(delta[y == 1] + exp(all_preds[y == 1])))))
-    right_logistic_log_likelihood <- sum((delta[y == -1] * log((exp(all_preds[y == -1]) + delta[y == -1])/delta[y == -1])) * vol[y == -1])
+    right_logistic_log_likelihood <- sum((log(delta[y == -1]/(delta[y == -1] + exp(all_preds[y == -1])))))
     logistic_log_likelihood <- left_logistic_log_likelihood - right_logistic_log_likelihood
-    num_events <- sum(exp(all_preds[y == -1]) * vol[y == -1])
+    num_events <- sum(exp(all_preds) * vol)
     
   } else if (analysis_type == "tuned") {
     cat(sprintf("--- Memanggil TUNER Python untuk %s...\n", toupper(model_type)))
