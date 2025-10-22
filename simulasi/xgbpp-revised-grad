@@ -17,7 +17,7 @@ def make_poisson_obj_xgb(vol_vec):
         labels = dtrain.get_label()
         weights = np.ones_like(labels)
         dummy_idx = np.where(labels < 0)[0]; event_idx = np.where(labels > 0)[0]
-        norm = np.sum(weights[dummy_idx] * vol_vec[dummy_idx]) if len(dummy_idx) > 0 else 1.0
+        norm = np.sum(weights * vol_vec) if len(dummy_idx) > 0 else 1.0
         if abs(norm) < 1e-9: norm = 1.0
         weights /= norm
         grad = np.zeros_like(labels, dtype=float); hess = np.zeros_like(labels, dtype=float)
@@ -36,7 +36,7 @@ def make_weighted_poisson_obj_xgb(vol_vec, F_prime_val, hess_min=1e-6):
         label = dtrain.get_label()
         weight = 1 / (1 + np.exp(preds) * F_prime_val)
         neg_idx = np.where(label < 0)[0]
-        sum_neg_weights = np.sum(weight[neg_idx] * vol_vec[neg_idx])
+        sum_neg_weights = np.sum(weight * vol_vec)
         if sum_neg_weights > 1e-9:
             weight /= sum_neg_weights
         pos_idx = np.where(label > 0)[0]
@@ -75,19 +75,20 @@ def make_logistic_obj_xgb(vol_vec, hess_min=1e-6):
         safe_vol_vec_pos[safe_vol_vec_pos == 0] = 1e-9
         safe_vol_vec = vol_vec.copy()
         safe_vol_vec[safe_vol_vec == 0] = 1e-9
+        #delta = len(neg_idx)/np.sum(vol_vec); delta_pos = delta; delta_neg = delta
         delta_pos = 1.0/safe_vol_vec_pos; delta_neg = 1.0/safe_vol_vec_neg; delta = 1.0/safe_vol_vec
         exp_preds_pos = np.exp(preds[pos_idx]); exp_preds_neg = np.exp(preds[neg_idx])
 
         #weight = (np.exp(preds) + delta) / (delta)
         weight = np.ones_like(label)
-        sum_neg_weights = np.sum(weight[neg_idx] * safe_vol_vec_neg)
+        sum_neg_weights = np.sum(weight * vol_vec)
         if sum_neg_weights > 1e-9:
             weight /= sum_neg_weights
 
-        grad[pos_idx] = (-weight[pos_idx] * delta_pos) / (exp_preds_pos * (delta_pos + exp_preds_pos)) + (weight[pos_idx] * delta_pos) / (exp_preds_pos + delta_pos)
-        grad[neg_idx] = (weight[neg_idx] * delta_neg) / (exp_preds_neg + delta_neg)
-        hess[pos_idx] = (weight[pos_idx] * delta_pos * (2 * exp_preds_pos + delta_pos)) / ((delta_pos * exp_preds_pos + exp_preds_pos**2)**2) + (-weight[pos_idx] * delta_pos) / ((delta_pos + exp_preds_pos)**2)
-        hess[neg_idx] = (-weight[neg_idx] * delta_neg) / ((delta_neg + exp_preds_neg)**2)
+        grad[pos_idx] = weight[pos_idx] * (((exp_preds_pos)/(exp_preds_pos + delta_pos)) - 1)
+        grad[neg_idx] = weight[neg_idx] * (((exp_preds_neg)/(exp_preds_neg + delta_neg)))
+        hess[pos_idx] = weight[pos_idx] * ((exp_preds_pos * delta_pos)/((exp_preds_pos + delta_pos)**2))
+        hess[neg_idx] = weight[neg_idx] * ((exp_preds_neg * delta_neg)/((exp_preds_neg + delta_neg)**2))
         hess = np.maximum(hess, hess_min)
         return grad, hess
     return logistic_obj
@@ -111,14 +112,14 @@ def make_weighted_logistic_obj_xgb(vol_vec, F_prime_val, hess_min=1e-6):
         exp_preds_pos = np.exp(preds[pos_idx]); exp_preds_neg = np.exp(preds[neg_idx])
 
         weight = (np.exp(preds) + delta) / (delta * (1 + np.exp(preds) * F_prime_val))
-        sum_neg_weights = np.sum(weight[neg_idx] * safe_vol_vec_neg)
+        sum_neg_weights = np.sum(weight * vol_vec)
         if sum_neg_weights > 1e-9:
             weight /= sum_neg_weights
 
-        grad[pos_idx] = (-weight[pos_idx] * delta_pos) / (exp_preds_pos * (delta_pos + exp_preds_pos)) + (weight[pos_idx] * delta_pos) / (exp_preds_pos + delta_pos)
-        grad[neg_idx] = (weight[neg_idx] * delta_neg) / (exp_preds_neg + delta_neg)
-        hess[pos_idx] = (weight[pos_idx] * delta_pos * (2 * exp_preds_pos + delta_pos)) / ((delta_pos * exp_preds_pos + exp_preds_pos**2)**2) + (-weight[pos_idx] * delta_pos) / ((delta_pos + exp_preds_pos)**2)
-        hess[neg_idx] = (-weight[neg_idx] * delta_neg) / ((delta_neg + exp_preds_neg)**2)
+        grad[pos_idx] = weight[pos_idx] * (((exp_preds_pos)/(exp_preds_pos + delta_pos)) - 1)
+        grad[neg_idx] = weight[neg_idx] * (((exp_preds_neg)/(exp_preds_neg + delta_neg)))
+        hess[pos_idx] = weight[pos_idx] * ((exp_preds_pos * delta_pos)/((exp_preds_pos + delta_pos)**2))
+        hess[neg_idx] = weight[neg_idx] * ((exp_preds_neg * delta_neg)/((exp_preds_neg + delta_neg)**2))
         hess = np.maximum(hess, hess_min)
         return grad, hess
     return weighted_logistic_obj
